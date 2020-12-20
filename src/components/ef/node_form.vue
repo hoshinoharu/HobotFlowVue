@@ -41,6 +41,11 @@
               <el-input-number v-model="node.timeout" :step="5">
               </el-input-number>
             </el-form-item>
+            <el-form-item label="确认间隔">
+              <el-input-number v-model="node.confirmSleep" :step="100">
+              </el-input-number>
+              <span>毫秒</span>
+            </el-form-item>
             <el-form-item label="行为索引">
               <el-input-number v-model="node.actionMarkIndex" :step="1"></el-input-number>
             </el-form-item>

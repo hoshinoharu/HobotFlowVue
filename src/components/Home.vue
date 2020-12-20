@@ -110,6 +110,7 @@
                 if (image.denoise == null) {
                     image.denoise = false;
                 }
+
                 if (this.data.measure == null) {
                     this.data.measure = {};
                 }
@@ -184,6 +185,10 @@
                     if (resp.success) {
                         base64.notExists = false;
                         base64.denoise = false;
+                        base64.possibility = 0.96;
+                        base64.compareXWhenNotMatch = false;
+                        base64.compareYWhenNotMatch = false;
+                        base64.directlyRecognizeTrue = false;
                         base64.src = resp.data;
                         callback(base64);
                     }

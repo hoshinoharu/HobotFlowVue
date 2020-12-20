@@ -10,7 +10,7 @@
       </el-col>
     </el-row>
     <div style="display: flex;height: calc(100% - 47px);">
-      <div id="efContainer" ref="efContainer" class="container" v-flowDrag @keydown="handleKey" tabindex="0"
+      <div id="efContainer" ref="efContainer" class="container" v-flowDrag @keydown="handleKey" @keyup="handleKey" tabindex="0"
            style="outline: none">
         <template v-for="node in data.nodeList">
           <flow-node
@@ -27,7 +27,7 @@
           </flow-node>
         </template>
         <!-- 给画布一个默认的宽度和高度 -->
-        <div style="position:absolute;top: 2000px;left: 2000px;">nbsp;</div>
+        <div style="position:absolute;top: 4000px;left: 4000px;">nbsp;</div>
       </div>
       <!-- 右侧表单 -->
       <div style="width: 300px;height: 100%;border-left: 1px solid #dce3e8;background-color: #FBFBFB">
@@ -82,11 +82,15 @@
                     type: undefined,
                     // 节点ID
                     nodeId: undefined,
+                    node:null,
                     // 连线ID
                     sourceId: undefined,
                     targetId: undefined
                 },
-                zoom: 0.5
+                zoom: 0.1,
+                //父子节点的关系
+                nodeRelation: {},
+                nodeCache: {},
             }
         },
         // 一些基础配置移动该文件中
@@ -144,8 +148,8 @@
             });
         },
         methods: {
-            requestShowImagePreview(image){
-              this.$emit('requestShowImagePreview', image);
+            requestShowImagePreview(image) {
+                this.$emit('requestShowImagePreview', image);
             },
             updateFlowNoe(node) {
                 for (let i = 0; i < this.data.nodeList.length; i++) {
@@ -163,8 +167,17 @@
                 });
             },
             handleKey(e) {
-                if (e.key == 'Delete') {
-                    this.deleteElement()
+                if (e.type === 'keydown') {
+                    if (e.key === 'Delete'){
+                      this.deleteElement();
+                    }else if (e.key === 'Shift'){
+                        //按下shift 表示添加子节点到拖拽
+                        this.addChildrenToDrag(this.activeElement.node);
+                    }
+                }else{
+                    if (e.key === 'Shift'){
+                        this.jsPlumb.clearDragSelection();
+                    }
                 }
             },
             // 返回唯一标识
@@ -192,11 +205,13 @@
                         let from = evt.source.id
                         let to = evt.target.id
                         if (this.loadEasyFlowFinish) {
-                            this.data.lineList.push({
+                            let line = {
                                 from: from,
                                 to: to,
                                 landmarkImageGroups: [],
-                            });
+                            };
+                            this.data.lineList.push(line);
+                            this.cacheLineRelation(line);
                         }
                     })
 
@@ -242,6 +257,34 @@
                     this.jsPlumb.setContainer(this.$refs.efContainer)
                 })
             },
+            draggableNode(node) {
+                this.nodeCache[node.id] = node;
+                this.jsPlumb.draggable(node.id, {
+                    containment: 'parent',
+                    stop: (el) => {
+                        // 拖拽节点结束后的对调
+                        console.log('拖拽结束: ', el);
+                        //清除拖拽选择
+                        this.jsPlumb.clearDragSelection();
+                    }
+                });
+            },
+            addChildrenToDrag(node) {
+                if (node == null){
+                    return;
+                }
+                let children = this.nodeRelation[node.id];
+                for (let index in children) {
+                    let child = this.nodeCache[children[index]];
+                    this.jsPlumb.addToDragSelection(child.id);
+                    this.addChildrenToDrag(child);
+                }
+            },
+            addPixel(obj, pro, pixel) {
+                let pxStr = obj[pro];
+                let px = parseInt(pxStr.split('px')[0]);
+                obj[pro] = px + pixel + 'px';
+            },
             // 加载流程图
             loadEasyFlow() {
                 // 初始化节点
@@ -252,13 +295,7 @@
                     // // 设置目标点，其他源点拖出的线可以连接该节点
                     this.jsPlumb.makeTarget(node.id, this.jsplumbTargetOptions)
                     if (!node.viewOnly) {
-                        this.jsPlumb.draggable(node.id, {
-                            containment: 'parent',
-                            stop: function (el) {
-                                // 拖拽节点结束后的对调
-                                console.log('拖拽结束: ', el)
-                            }
-                        })
+                        this.draggableNode(node)
                     }
                 }
                 // 初始化连线
@@ -273,10 +310,22 @@
                         paintStyle: line.paintStyle ? line.paintStyle : undefined,
                     };
                     let conn = this.jsPlumb.connect(connParam, this.jsplumbConnectOptions)
+                    this.cacheLineRelation(line);
                 }
                 this.$nextTick(function () {
                     this.loadEasyFlowFinish = true
                 })
+            },
+            //缓存连线关系
+            cacheLineRelation(line) {
+                let children = null;
+                if (line.from in this.nodeRelation) {
+                    children = this.nodeRelation[line.from];
+                } else {
+                    children = [];
+                    this.nodeRelation[line.from] = children;
+                }
+                children.push(line.to);
             },
             // 设置连线条件
             onSaveLine(line) {
@@ -301,7 +350,7 @@
             },
             getLineLabel(line) {
                 if (line.landmarkImageGroups == null || line.landmarkImageGroups.length == 0) {
-                    return '设置标识图片';
+                    return '';
                 }
                 return '<img src=' + line.landmarkImageGroups[0].images[0].src + ' style="width:40px;height:40px;object-fit: contain; "></img>';
             },
@@ -388,13 +437,7 @@
                 this.$nextTick(() => {
                     this.jsPlumb.makeSource(nodeId, this.jsplumbSourceOptions);
                     this.jsPlumb.makeTarget(nodeId, this.jsplumbTargetOptions);
-                    this.jsPlumb.draggable(nodeId, {
-                        containment: 'parent',
-                        stop: function (el) {
-                            // 拖拽节点结束后的对调
-                            console.log('拖拽结束: ', el)
-                        }
-                    });
+                    this.draggableNode(node);
                     this.clickNode(node);
                 })
             },
@@ -429,6 +472,7 @@
                 return true
             },
             clickNode(node) {
+                this.jsPlumb.clearDragSelection();
                 console.log(node);
                 this.activeElement.type = 'node'
                 this.activeElement.node = node;

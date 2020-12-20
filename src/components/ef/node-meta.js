@@ -62,6 +62,7 @@ export default function metaNode() {
       enable: true,
       order: 0,
       repaint: true,//是否会更新ui页面，默认每个操作都会触发节点的更新
+      confirmSleep:500,//默认确认执行超时
     },
   };
   let id = 0;
