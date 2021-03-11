@@ -1,51 +1,12 @@
 <template>
   <div style="width: 100vw;height: 100vh;overflow: hidden;">
-    <el-dialog
-      title="识别详情"
-      :visible.sync="dialogVisible"
-      center>
-      <el-form v-if="recognizeResult !=null">
-        <el-form-item label="识别图片">
-          <el-image ref="preview" id="preview" :src="recognizeResult.image"
-                    :preview-src-list="[recognizeResult.image]"></el-image>
-        </el-form-item>
-        <el-form-item label="可能性">
-          <span>{{recognizeResult.possibility * 100}}%</span>
-        </el-form-item>
-        <el-form-item label="识别位置">
-          <span>X:{{recognizeResult.x}} Y:{{recognizeResult.y}}</span>
-        </el-form-item>
-        <el-form-item label="行为">
-          <span>{{recognizeResult.action == null ? 'recognizeOnly' : recognizeResult.action}}</span>
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="dialogVisible = false">确 定</el-button>
-      </span>
-    </el-dialog>
-
-    <!--    <el-dialog-->
-    <!--      title="提示"-->
-    <!--      :visible.sync="dialogVisible"-->
-    <!--      :fullscreen="true"-->
-    <!--    >-->
-    <!--      <span slot="footer" class="dialog-footer">-->
-    <!--      <el-button @click="dialogVisible = false">取 消</el-button>-->
-    <!--      <el-button type="primary" @click="dialogVisible = false">确 定</el-button>-->
-    <!--      </span>-->
-    <!--    </el-dialog>-->
     <div style="width: 229px;border-right: 1px solid #dce3e8;float: left">
-      <maker ref="maker"
-             @initFlowData="onInitFlowData"
-             @flowNodeUpdate="onFlowNodeUpdate"
-      ></maker>
+      <GflowMaker ref="maker">
+
+      </GflowMaker>
     </div>
     <div style="width: calc(100% - 230px);float: left">
-      <flow-panel @requestScreenCapture="onRequestScreenCapture" ref="flowPanel"
-                  @uploadFlowData="onUploadFlowData"
-                  @requestStartFlow="onRequestStartFlow"
-                  @requestShowImagePreview="onShowImagePreview"
-      ></flow-panel>
+
     </div>
   </div>
 </template>
@@ -54,10 +15,11 @@
     import FlowPanel from "./ef/flow-panel";
     import Maker from "./Maker";
     import {uuid} from 'vue-uuid'
+    import GflowMaker from "./GflowMaker";
 
     export default {
-        name: "Home",
-        components: {Maker, FlowPanel},
+        name: "GflowHome",
+        components: {GflowMaker, Maker, FlowPanel},
         data() {
             return {
                 dialogVisible: false,

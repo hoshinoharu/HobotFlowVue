@@ -1,5 +1,6 @@
 <template @keydown.native="onKeyDown">
   <div style="display: block;height:calc(100vh - 32px);padding: 16px" ref="container">
+    <el-button @click="showDialog">上传</el-button>
     <div ref="screenContainer" style="width: 100%;height: 50%;outline: none" tabindex="0" @keydown="onKeyDown">
       <canvas ref="screenCanvas"
               :style="'transform: scale('+screenScale+') translate('+screenXRatio+'px,'+screenYRatio+'px);transform-origin:top left;position:absolute;'"
@@ -17,6 +18,41 @@
       >
       </canvas>
     </div>
+
+    <el-dialog
+      title="上传屏幕截图"
+      :visible.sync="dialogVisible"
+      width="30%">
+      <el-form :model="screenPart" @keyup.enter.native="uploadData">
+        <el-form-item label="统一名称" label-width="80px">
+          <el-input v-model="screenPart.uniqueName"></el-input>
+        </el-form-item>
+        <el-form-item label="屏幕宽度" label-width="80px">
+          <el-input-number v-model="screenPart.resolutionWidth" :precision="2" :step="0.1"
+                           disabled></el-input-number>
+        </el-form-item>
+        <el-form-item label="屏幕高度" label-width="80px">
+          <el-input-number v-model="screenPart.resolutionHeight" :precision="2" :step="0.1"
+                           disabled></el-input-number>
+        </el-form-item>
+        <el-form-item label="截屏宽度" label-width="80px">
+          <el-input-number v-model="screenPart.width" :precision="2" :step="0.1" disabled></el-input-number>
+        </el-form-item>
+        <el-form-item label="截屏高度" label-width="80px">
+          <el-input-number v-model="screenPart.height" :precision="2" :step="0.1" disabled></el-input-number>
+        </el-form-item>
+        <el-form-item label="x" label-width="80px">
+          <el-input-number v-model="screenPart.x" :precision="2" :step="0.1" disabled></el-input-number>
+        </el-form-item>
+        <el-form-item label="y" label-width="80px">
+          <el-input-number v-model="screenPart.y" :precision="2" :step="0.1" disabled></el-input-number>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+    <el-button @click="dialogVisible = false">取 消</el-button>
+    <el-button type="primary" @click="uploadData">确 定</el-button>
+  </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -24,9 +60,11 @@
     import {uuid} from 'vue-uuid'
 
     export default {
-        name: 'Maker',
+        name: 'GflowMaker',
         data() {
             return {
+                dialogVisible: false,
+
                 appSocket: null,
                 screenCanvas: null,
                 screenCanvasMask: null,
@@ -49,6 +87,8 @@
                 captureXRatio: 0,
                 captureYRatio: 0,
                 captureContainer: null,
+
+                screenPart: {},
             }
         },
         methods: {
@@ -89,14 +129,14 @@
                 img.src = dataUrl;
             },
             fileOrBlobToDataURL(obj, callback) {
-                let imgData = new Blob([obj], {type: "image/jpeg"});
-                let url = URL.createObjectURL(imgData);
-                callback(url);
-                // let a = new FileReader();
-                // a.readAsDataURL(obj);
-                // a.onload = function (e) {
-                //     callback(e.target.result);
-                // };
+                // let imgData = new Blob([obj], {type:"image/jpeg"});
+                // let url = URL.createObjectURL(imgData);
+                // callback(url);
+                let a = new FileReader();
+                a.readAsDataURL(obj);
+                a.onload = function (e) {
+                    callback(e.target.result);
+                };
             },
             // Blob转canvas
             blobToCanvas(blob) {
@@ -154,12 +194,6 @@
                         this.appSocket.send("1");
                     };
                 }
-            },
-            uploadFlowData(data) {
-                this.appSocket.send(JSON.stringify({
-                    operate: 'uploadFlowData',
-                    content: data,
-                }));
             },
             drawCaptureFrame() {
                 if (this.screenCanvasMaskContext == null) {
@@ -270,7 +304,6 @@
             getScreenCapture() {
                 let base64 = this.captureCanvas.toDataURL('image/png');
                 let capture = {
-                    uniqueName: '',
                     id: uuid.v1(),
                     src: base64,
                     resolutionWidth: this.screenImage.width,
@@ -282,28 +315,18 @@
                 };
                 return capture;
             },
-            startFlow(data) {
-                this.sendOperation('startFlow', data);
+            showDialog() {
+                this.screenPart = this.getScreenCapture();
+                if (this.screenPart == null) {
+                    this.screenPart = {};
+                }
+                this.dialogVisible = true;
             },
-            sendOperation(operate, content) {
-                this.$message.info('下发命令' + operate)
-                console.log('下发命令' + operate)
-                this.appSocket.send(JSON.stringify({
-                    operate: operate,
-                    content: content
-                }));
+            uploadData() {
+                this.$http.post("/screen/part", this.screenPart).then(res => {
+                    this.dialogVisible = false;
+                });
             },
-            refreshDpi() {
-                // this.$http.get('adb/display/info')
-                //     .then(resp => {
-                //         if (resp.data.code == 200) {
-                //             this.$store.commit('setDisplayInfo', resp.data.data);
-                //         }
-                //         setTimeout(this.refreshDpi, 500);
-                //     }).catch(reason => {
-                //     this.refreshDpi();
-                // })
-            }
         },
         mounted() {
             this.screenCanvas = this.$refs.screenCanvas;
@@ -312,8 +335,6 @@
             this.captureCanvas = this.$refs.captureCanvas;
             this.captureContainer = this.$refs.captureContainer;
             this.initWebSocket();
-            this.refreshDpi();
-
         },
         created() {
         }

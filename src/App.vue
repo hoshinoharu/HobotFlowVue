@@ -1,14 +1,15 @@
 <template>
-    <div id="app">
-      <Home></Home>
-    </div>
+  <div id="app">
+    <GflowHome></GflowHome>
+  </div>
 </template>
 
 <script>
 
-    import Home from "./components/Home";
+    import GflowHome from "./components/GflowHome";
+
     export default {
         name: 'App',
-        components: {Home},
+        components: {GflowHome},
     }
 </script>

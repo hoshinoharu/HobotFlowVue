@@ -9,6 +9,13 @@
         </el-image>
         <div style="display: flex;flex-direction: column;padding: 16px">
           <el-form :model="targetImage" label-width="80px">
+            <el-form-item label="屏幕适配">
+              <el-select
+                filterable
+                default-first-option
+                placeholder="请选择分辨率">
+              </el-select>
+            </el-form-item>
             <el-form-item label="直接判过">
               <el-switch
                 v-model="targetImage.directlyRecognizeTrue"
